@@ -37,7 +37,7 @@ Right now, the best way to contribute is to:
 
 ## Acknowledgements
 
-This project is being developed by **[LebedevIV]** in close collaboration with Google's large language model, which is serving as the Lead Architect and Senior Developer for this project.
+This project is being developed by **[LebedevIV](https://github.com/LebedevIV)** in close collaboration with Google's large language model, which is serving as the Lead Architect and Senior Developer for this project.
 
 ## License
 
