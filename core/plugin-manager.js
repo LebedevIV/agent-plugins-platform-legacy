@@ -15,7 +15,7 @@ export async function getAvailablePlugins() {
     
     for (const dirName of PLUGIN_DIRS) {
         try {
-            const manifestUrl = `/agent-plugins-platform/plugins/${dirName}/manifest.json`;
+            const manifestUrl = `/plugins/${dirName}/manifest.json`;
             const response = await fetch(manifestUrl);
 
             if (!response.ok) {
@@ -28,7 +28,7 @@ export async function getAvailablePlugins() {
             plugins.push({
                 id: dirName,
                 ...manifest,
-                iconUrl: `/agent-plugins-platform/plugins/${dirName}/${manifest.icon}`
+                iconUrl: `/ыplugins/${dirName}/${manifest.icon}`
             });
 
         } catch (error) {
