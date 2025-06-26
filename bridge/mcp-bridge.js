@@ -4,7 +4,6 @@ export function runTool(pluginId, toolName, toolInput) {
   return new Promise((resolve, reject) => {
     if (!pyodideWorker) {
       console.log("Creating Pyodide worker for the first time...");
-      // Создаем ПРОСТОЙ, НЕ-МОДУЛЬНЫЙ воркер
       pyodideWorker = new Worker(new URL('./pyodide-worker.js', import.meta.url));
     }
 
@@ -21,7 +20,6 @@ export function runTool(pluginId, toolName, toolInput) {
       reject(error);
     };
 
-    // Просто отправляем задачу
     pyodideWorker.postMessage({ pluginId, toolName, toolInput });
   });
 }

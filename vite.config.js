@@ -7,9 +7,7 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
   },
-  // Эта опция нужна, чтобы Vite правильно обрабатывал воркеры
   worker: {
     format: 'es' 
   }
 });
-

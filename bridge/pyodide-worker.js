@@ -1,24 +1,20 @@
-// Используем importScripts для загрузки классического скрипта с CDN
 importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js');
 
 let pyodide;
 
-// Асинхронно инициализируем Pyodide
 async function initializePyodide() {
     console.log("Pyodide worker: Initializing Pyodide from CDN...");
-    // loadPyodide теперь является глобальной функцией внутри воркера
     pyodide = await loadPyodide();
     console.log("Pyodide worker: Pyodide loaded successfully!");
 }
 const pyodideReadyPromise = initializePyodide();
 
-// Обработчик сообщений (остается без изменений)
 self.onmessage = async (event) => {
     await pyodideReadyPromise;
     const { pluginId, toolName, toolInput } = event.data;
 
     try {
-        const pyScriptUrl = `/plugins/${pluginId}/mcp_server.py?raw`;
+        const pyScriptUrl = `/plugins/${pluginId}/mcp_server.py`;
         const response = await fetch(pyScriptUrl);
         if (!response.ok) {
             throw new Error(`Failed to fetch Python script: ${response.status} ${response.statusText}`);
