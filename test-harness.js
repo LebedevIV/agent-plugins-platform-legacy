@@ -1,5 +1,5 @@
-import { getAvailablePlugins } from './core/plugin-manager.js';
-import { createPluginCard } from './ui/PluginCard.js';
+import { getAvailablePlugins } from '/core/plugin-manager.js';
+import { createPluginCard } from '/ui/PluginCard.js';
 
 console.log('Тестовый стенд инициализирован.');
 
