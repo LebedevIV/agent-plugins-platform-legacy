@@ -1,6 +1,12 @@
 import { getAvailablePlugins } from './core/plugin-manager.js';
 import { createPluginCard } from './ui/PluginCard.js';
 
+import { hostApi } from './core/host-api.js'; // <-- 1. Импортируем API
+
+window.hostApi = hostApi; // <-- 2. Делаем API глобально доступным для моста
+
+// ... остальной код без изменений ...
+
 console.log('Тестовый стенд инициализирован.');
 
 const pluginsListContainer = document.getElementById('plugins-list');

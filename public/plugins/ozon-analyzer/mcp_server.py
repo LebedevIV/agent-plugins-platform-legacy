@@ -1,51 +1,41 @@
 import sys
 import json
-import time
+from typing import Any, Dict
+import asyncio
 
-def analyze_ozon_product(data):
-    """
-    Простая имитация анализа данных со страницы Ozon.
-    """
-    url = data.get("page_url", "no url provided")
-    # Просто возвращаем информацию о том, что получили
-    return {
-        "status": "success",
-        "message": f"Python script successfully analyzed the URL: {url}",
-        "engine": "Pyodide"
-    }
+# --- Эта функция остается асинхронной и правильной ---
+async def analyze_ozon_product(data: Dict[str, Any]) -> Dict[str, Any]:
+    await js.sendMessageToChat_bridge({"content": "Начинаю анализ страницы..."}) # type: ignore
 
-def main():
-    """
-    Главный цикл MCP-сервера.
-    Читает одну строку из stdin, обрабатывает ее и пишет результат в stdout.
-    """
+    page_content_proxy = await js.getActivePageContent_bridge({"title": "h1"}) # type: ignore
+    page_content: Dict[str, Any] = page_content_proxy.to_py()
+
+    await js.sendMessageToChat_bridge({"content": f"Получен заголовок: {page_content.get('title')}"}) # type: ignore
+    
+    final_message = f"Анализ завершен. Найдено {page_content.get('reviews_count', 0)} отзывов."
+    await js.sendMessageToChat_bridge({"content": final_message}) # type: ignore
+
+    return { "status": "success", "message": "Done." }
+
+# --- Главная функция теперь тоже асинхронна ---
+async def main() -> None:
     try:
-        # Читаем одну строку запроса
         line = sys.stdin.readline()
-        if not line:
-            return # Выходим, если нет данных
-
-        request = json.loads(line)
-        
+        if not line: return
+        request: Dict[str, Any] = json.loads(line)
         tool_name = request.get("tool")
         tool_input = request.get("input")
-
         result = None
         if tool_name == "analyze-ozon-product":
-            result = analyze_ozon_product(tool_input)
+            result = await analyze_ozon_product(tool_input or {})
         else:
             result = {"error": f"Unknown tool: {tool_name}"}
-
-        # Формируем и отправляем ответ
         response = {"id": request.get("id"), "result": result}
         sys.stdout.write(json.dumps(response) + '\n')
-        sys.stdout.flush()
-
     except Exception as e:
-        error_response = {"error": str(e)}
-        # Важно писать ошибки в stdout, чтобы JS мог их поймать
-        sys.stdout.write(json.dumps(error_response) + '\n')
-        sys.stdout.flush()
+        import traceback
+        error_info = traceback.format_exc()
+        sys.stdout.write(json.dumps({"error": error_info}) + '\n')
 
-# Запускаем главный обработчик
-main()
+# ▼▼▼ ГЛАВНОЕ: НЕТ НИКАКОГО ВЫЗОВА В КОНЦЕ ФАЙЛА! ▼▼▼
+# Файл просто определяет функции и заканчивается.
