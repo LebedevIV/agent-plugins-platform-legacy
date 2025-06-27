@@ -1,65 +1,48 @@
-importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js');
+let pyodideWorker;
+const promises = new Map();
 
-let pyodide;
-const callPromises = new Map();
+function initializeWorker() {
+    if (pyodideWorker) return;
+    pyodideWorker = new Worker(new URL('./pyodide-worker.js', import.meta.url));
 
-async function initializePyodide() {
-    console.log("[Worker] ⏳ Initializing Pyodide...");
-    pyodide = await loadPyodide();
-    // Создаем прокси-объект, который будет доступен в Python как `js`
-    pyodide.globals.set('js', {
-        sendMessageToChat_bridge: (message) => {
-             return new Promise(resolve => {
-                self.postMessage({ type: 'host_call', func: 'sendMessageToChat', args: [message.toJs({ dict_converter: Object.fromEntries })] });
-                resolve();
-            });
-        },
-        getActivePageContent_bridge: (selectors) => {
-            const callId = `call_${Date.now()}_${Math.random()}`;
-            self.postMessage({ type: 'host_call', callId, func: 'getActivePageContent', args: [selectors.toJs({ dict_converter: Object.fromEntries })] });
-            return new Promise(resolve => {
-                callPromises.set(callId, resolve);
-            });
+    pyodideWorker.onmessage = async (event) => {
+        const { type, callId, result, error, func, args } = event.data;
+
+        switch (type) {
+            case 'host_call':
+                if (window.hostApi && typeof window.hostApi[func] === 'function') {
+                    const finalArgs = args.map(arg => (typeof arg?.toJs === 'function') ? arg.toJs() : arg);
+                    const hostResult = await window.hostApi[func](...finalArgs);
+                    if (callId && hostResult !== undefined) {
+                        pyodideWorker.postMessage({ type: 'host_result', callId, result: hostResult });
+                    }
+                }
+                break;
+            
+            case 'complete':
+            case 'error':
+                const promise = promises.get(callId);
+                if (promise) {
+                    type === 'complete' ? promise.resolve(result) : promise.reject(new Error(error));
+                    promises.delete(callId);
+                }
+                break;
         }
-    });
-    console.log("[Worker] ✅ Pyodide loaded.");
+    };
 }
-const pyodideReadyPromise = initializePyodide();
 
-self.onmessage = async (event) => {
-    await pyodideReadyPromise;
-    const { type, callId, result, pythonCode, mcpRequest } = event.data;
+// ▼▼▼ ВОТ ОНО, НЕДОСТАЮЩЕЕ СЛОВО! ▼▼▼
+export async function runTool(pluginId, toolName, toolInput) {
+    initializeWorker();
+    const callId = `tool_run_${Date.now()}_${Math.random()}`;
+    const pyScriptUrl = `/plugins/${pluginId}/mcp_server.py`;
+    const response = await fetch(pyScriptUrl);
+    if (!response.ok) throw new Error(`Script not found: ${response.status}`);
+    const pythonCode = await response.text();
+    const mcpRequest = { id: `req_${Date.now()}`, tool: toolName, input: toolInput };
 
-    switch (type) {
-        case 'host_result':
-            const promiseResolver = callPromises.get(callId);
-            if (promiseResolver) {
-                promiseResolver(result);
-                callPromises.delete(callId);
-            }
-            break;
-
-        case 'run_python':
-            try {
-                pyodide.setStdin({ stdin: () => JSON.stringify(mcpRequest) + '\n' });
-                let capturedResult = '';
-                pyodide.setStdout({ batched: (str) => { capturedResult += str + '\n'; } });
-                
-                // ▼▼▼ ГЛАВНОЕ ИЗМЕНЕНИЕ ▼▼▼
-                // Шаг 1: Просто выполняем код, чтобы ОПРЕДЕЛИТЬ функции
-                await pyodide.runPythonAsync(pythonCode);
-                // Шаг 2: "Достаем" главную функцию из Python
-                const mainFunc = pyodide.globals.get('main');
-                // Шаг 3: Явно "ждем" ее выполнения
-                await mainFunc();
-                // ▲▲▲ КОНЕЦ ГЛАВНОГО ИЗМЕНЕНИЯ ▲▲▲
-
-                const resultJson = JSON.parse(capturedResult.trim());
-                if (resultJson.error) { throw new Error(resultJson.error); }
-                self.postMessage({ type: 'complete', callId, result: resultJson.result });
-            } catch (e) {
-                self.postMessage({ type: 'error', callId, error: e.message });
-            }
-            break;
-    }
-};
+    return new Promise((resolve, reject) => {
+        promises.set(callId, { resolve, reject });
+        pyodideWorker.postMessage({ type: 'run_python', callId, pythonCode, mcpRequest });
+    });
+}
