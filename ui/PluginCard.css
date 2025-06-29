@@ -52,18 +52,15 @@
     margin: 4px 0 0 0;
 }
 
-/* Добавляем стиль для кликабельной карточки */
 .plugin-card.clickable {
     cursor: pointer;
 }
 
-/* Стиль для карточки в "активном" состоянии (когда плагин "работает") */
 .plugin-card.running {
-    box-shadow: 0 0 0 2px #007bff; /* Яркая рамка */
-    background-color: #e7f3ff; /* Легкий синий фон */
+    box-shadow: 0 0 0 2px #007bff;
+    background-color: #e7f3ff;
 }
 
-/* Анимация для индикатора загрузки */
 .plugin-loader {
     animation: spin 1s linear infinite;
 }
